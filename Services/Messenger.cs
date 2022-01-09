@@ -44,6 +44,7 @@ namespace EscortBookMessenger.Services
             using var mailMessage = new MailMessage(from, to);
             mailMessage.Subject = subject;
             mailMessage.Body = body;
+            mailMessage.IsBodyHtml = true;
 
             await smtpClient.SendMailAsync(mailMessage);
         }

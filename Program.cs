@@ -16,7 +16,7 @@ namespace EscortBookMessenger
             {
                 scheduler
                     .Schedule<MessengerJob>()
-                    .EveryMinute();
+                    .EveryFiveMinutes();
             });
             host.Run();
         }
