@@ -1,7 +1,5 @@
-using Coravel;
-using EscortBookMessenger.Jobs;
+using EscortBookMessenger.Backgrounds;
 using EscortBookMessenger.Services;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -12,12 +10,6 @@ namespace EscortBookMessenger
         public static void Main(string[] args)
         {
             IHost host = CreateHostBuilder(args).Build();
-            host.Services.UseScheduler(scheduler =>
-            {
-                scheduler
-                    .Schedule<MessengerJob>()
-                    .EveryFiveMinutes();
-            });
             host.Run();
         }
 
@@ -25,12 +17,8 @@ namespace EscortBookMessenger
             Host.CreateDefaultBuilder(args)
                 .ConfigureServices((hostContext, services) =>
                 {
-                    IConfiguration configuration = hostContext.Configuration;
-
-                    services.AddScheduler();
-                    services.AddTransient<MessengerJob>();
-                    services.AddTransient<IAWSSQSService, AWSSQSService>();
-                    services.AddTransient<IMessenger, Messenger>();
+                    services.AddSingleton<IMessenger, Messenger>();
+                    services.AddHostedService<KafkaMessengerConsumer>();
                 });
     }
 }
