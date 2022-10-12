@@ -1,10 +1,9 @@
 using System.Threading.Tasks;
 using EscortBookMessenger.Models;
 
-namespace EscortBookMessenger.Services
+namespace EscortBookMessenger.Services;
+
+public interface IMessenger
 {
-    public interface IMessenger
-    {
-        Task SendEmailAsync(RequestorsMessage requestorsMessage);
-    }
+    Task SendEmailAsync(RequestorsMessage requestorsMessage);
 }

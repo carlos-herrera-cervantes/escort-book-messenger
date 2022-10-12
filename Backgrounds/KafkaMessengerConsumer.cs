@@ -2,78 +2,73 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
+using EscortBookMessenger.Constants;
 using EscortBookMessenger.Models;
 using EscortBookMessenger.Services;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace EscortBookMessenger.Backgrounds
+namespace EscortBookMessenger.Backgrounds;
+
+public class KafkaMessengerConsumer : BackgroundService
 {
-    public class KafkaMessengerConsumer : BackgroundService
+    #region snippet_Properties
+
+    private readonly ILogger _logger;
+
+    private readonly IMessenger _messenger;
+
+    #endregion
+
+    #region snippet_Constructors
+
+    public KafkaMessengerConsumer
+    (
+        ILogger<KafkaMessengerConsumer> logger,
+        IMessenger messenger
+    )
     {
-        #region snippet_Properties
+        _logger = logger;
+        _messenger = messenger;
+    }
 
-        private readonly IConfiguration _configuration;
+    #endregion
 
-        private readonly ILogger _logger;
+    #region snippet_ActionMethods
 
-        private readonly IMessenger _messenger;
-
-        #endregion
-
-        #region snippet_Constructors
-
-        public KafkaMessengerConsumer
-        (
-            IConfiguration configuration,
-            ILogger<KafkaMessengerConsumer> logger,
-            IMessenger messenger
-        )
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        var config = new ConsumerConfig
         {
-            _configuration = configuration;
-            _logger = logger;
-            _messenger = messenger;
-        }
+            GroupId = Environment.GetEnvironmentVariable("KAFKA_GROUP_ID"),
+            BootstrapServers = Environment.GetEnvironmentVariable("KAFKA_SERVERS"),
+            AutoOffsetReset = AutoOffsetReset.Earliest
+        };
 
-        #endregion
+        using var builder = new ConsumerBuilder<Ignore, string>(config).Build();
+        builder.Subscribe(KafkaTopic.SendEmail);
 
-        #region snippet_ActionMethods
+        var cancelToken = new CancellationTokenSource();
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        while (!stoppingToken.IsCancellationRequested)
         {
-            var config = new ConsumerConfig
+            try
             {
-                GroupId = _configuration["Kafka:GroupId"],
-                BootstrapServers = _configuration["Kafka:Servers"],
-                AutoOffsetReset = AutoOffsetReset.Earliest
-            };
+                var consumer = builder.Consume(cancelToken.Token);
+                var requestorsMessage = JsonConvert
+                    .DeserializeObject<RequestorsMessage>(consumer.Message.Value);
 
-            using var builder = new ConsumerBuilder<Ignore, string>(config).Build();
-            builder.Subscribe(_configuration["Kafka:Topics:SendEmail"]);
-
-            var cancelToken = new CancellationTokenSource();
-
-            while (!stoppingToken.IsCancellationRequested)
+                await _messenger.SendEmailAsync(requestorsMessage);
+            }
+            catch (Exception e)
             {
-                try
-                {
-                    var consumer = builder.Consume(cancelToken.Token);
-                    var requestorsMessage = JsonConvert
-                        .DeserializeObject<RequestorsMessage>(consumer.Message.Value);
-
-                    await _messenger.SendEmailAsync(requestorsMessage);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError("AN ERROR HAS OCCURRED SENDING AN EMAIL");
-                    _logger.LogError(e.Message);
-                    builder.Close();
-                }
+                _logger.LogError("AN ERROR HAS OCCURRED SENDING AN EMAIL");
+                _logger.LogError(e.Message);
+                builder.Close();
             }
         }
-
-        #endregion
     }
+
+    #endregion
 }
