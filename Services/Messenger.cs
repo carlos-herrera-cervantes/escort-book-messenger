@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Mail;
 using System.Threading.Tasks;
 using EscortBookMessenger.Models;
+using EscortBookMessenger.Constants;
 
 namespace EscortBookMessenger.Services;
 
@@ -13,7 +14,6 @@ public class Messenger : IMessenger
     public async Task SendEmailAsync(RequestorsMessage requestorsMessage)
     {
         var (to, subject, body) = requestorsMessage;
-        var from = Environment.GetEnvironmentVariable("MAIL_SERVER_FROM");
 
         using var smtpClient = new SmtpClient
         {
@@ -22,14 +22,10 @@ public class Messenger : IMessenger
             EnableSsl = true,
             DeliveryMethod = SmtpDeliveryMethod.Network,
             UseDefaultCredentials = false,
-            Credentials = new NetworkCredential
-            (
-                from,
-                Environment.GetEnvironmentVariable("MAIL_SERVER_PASSWORD")
-            )
+            Credentials = new NetworkCredential(Mail.From, Mail.Password)
         };
 
-        using var mailMessage = new MailMessage(from, to);
+        using var mailMessage = new MailMessage(Mail.From, to);
         mailMessage.Subject = subject;
         mailMessage.Body = body;
         mailMessage.IsBodyHtml = true;

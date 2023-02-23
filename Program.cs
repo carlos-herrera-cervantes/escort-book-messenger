@@ -1,7 +1,10 @@
-using EscortBookMessenger.Backgrounds;
-using EscortBookMessenger.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Confluent.Kafka;
+using Confluent.Kafka.DependencyInjection;
+using EscortBookMessenger.Backgrounds;
+using EscortBookMessenger.Services;
+using EscortBookMessenger.Constants;
 
 namespace EscortBookMessenger;
 
@@ -19,5 +22,10 @@ public class Program
             {
                 services.AddSingleton<IMessenger, Messenger>();
                 services.AddHostedService<KafkaMessengerConsumer>();
+                services.AddKafkaClient(new ConsumerConfig
+                {
+                    GroupId = KafkaConfig.GroupId,
+                    BootstrapServers = KafkaConfig.Servers
+                });
             });
 }
